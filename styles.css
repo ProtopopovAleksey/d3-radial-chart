@@ -1,0 +1,43 @@
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.tooltip {
+  width: 250px;
+  background-color: #676F7A;
+  border-radius: 4px;
+  color: #F0F3F7;
+  padding: 20px 18px;
+  position: absolute;
+
+  transform: translate(0, -50%);
+}
+
+.tooltip:before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  position: absolute;
+
+  left: -8px;
+  top: 50%;
+  transform: translate(0, -50%);
+
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid #676F7A;
+
+}
+
+.tooltip > h2 {
+  font-size: 15px;
+  margin: 0 0 12px 0;
+  font-weight: normal;
+}
+
+.tooltip > p {
+  font-size: 12px;
+  line-height: 15px;
+  margin: 0;
+}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="d3-scale-radial.js"></script>
+  <script src="data.js"></script>
+  <link rel="stylesheet" type="text/css" href="styles.css"/>
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    text {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+    }
+    
+    .x-axis {
+      fill: #fff;
+    }
+    
+    .tick > text {
+      color: #99A0A8;
+      fill: #99A0A8;
+    }
+    
+    .tick > line {
+      display: none;
+    }
+    
+    .domain {
+      stroke-width: 1px;
+    }
+  
+  </style>
+</head>
+
+<body>
+  <div id="my_dataviz" style="width: 640px; height: 320px; position: relative; margin: 50px auto"></div>
+  
+  <script>
+    
+    
+    var margin = {top: 0, right: 0, bottom: 25, left: 0},
+      width = document.getElementById('my_dataviz').offsetWidth - margin.left - margin.right,
+      height = document.getElementById('my_dataviz').offsetHeight - margin.top - margin.bottom;
+    
+    var svg = d3.select("#my_dataviz")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    
+    svg.append("g")
+      .append("svg:image")
+      .attr('x', width * .05)
+      .attr('y', height * .35)
+      .attr("xlink:href", "figure1.png")
+    
+    svg.append("g")
+      .append("svg:image")
+      .attr('x', width * .55)
+      .attr('y', height * .68)
+      .attr("xlink:href", "figure2.png")
+    
+    var container = svg.append("g")
+      .attr("transform",
+        "translate(" + (width / 2 + margin.left) + "," + height + ")");
+    
+    var outerRadius = height;
+    
+    var x = d3.scaleLinear()
+      .range([-Math.PI / 2, Math.PI / 2])
+      .domain([0, 500000])
+    
+    var x2 = d3.scaleLinear()
+      .range([0, width])
+      .domain([0, 500000])
+    
+    var y = d3.scaleRadial()
+      .range([0, outerRadius])
+      .domain([0, 55])
+    
+    var z = d3.scaleLinear()
+      .domain([10, 100])
+      .range([2, 25]);
+    
+    data.forEach(point => {
+      point.angle = x(Number(point.cost)) - Math.PI / 2
+      point.radius = y(Number(point.months))
+    })
+    
+    
+    var yAxis = container.append("g")
+      .attr("text-anchor", "middle");
+    
+    var yTick = yAxis
+      .selectAll("g")
+      .data([6, 12, 18, 24, 30, 36, 42, 48])
+      .enter()
+      .append("g")
+      .attr('class', 'tick');
+    
+    yTick.append("circle")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("r", y);
+    
+    var labels = yTick.append("text")
+      .attr("y", d => -y(d))
+      .attr("dy", "-4px")
+      .text(d => `${(d % 12 === 0) ? `${(d / 12).toFixed()} year` : ''}`);
+    
+    container.append('rect')
+      .attr("transform", `translate(${-width / 2},${0})`)
+      .attr("class", "x-axis")
+      .attr('width', width)
+      .attr('height', margin.bottom)
+    
+    // -1- Create a tooltip div that is hidden by default:
+    var tooltip = d3.select("#my_dataviz")
+      .append("div")
+      .style("opacity", 0)
+      .attr("class", "tooltip")
+      .style("visibility", "hidden")
+      .style("transition", "visibility 0s, opacity 0.3s linear")
+    
+    // -2- Create 3 functions to show / update (when mouse move but stay on same circle) / hide the tooltip
+    var showTooltip = function (d) {
+      const bubblesData = d3.select(d.target).data()[0]
+      
+      d3.select(d.target)
+        .raise()
+      
+      tooltip
+        .style("opacity", 1)
+        .style("visibility", "visible")
+        .html(`<h2>${bubblesData.task} - ~ $${(bubblesData.cost / 1000).toFixed()}k</h2><p>${bubblesData.description}</p>`)
+        .style("left", width / 2 + (bubblesData.radius * Math.cos(bubblesData.angle)) + margin.left + 10 + z(bubblesData.size) + 'px')
+        .style("top", height + (bubblesData.radius * Math.sin(bubblesData.angle)) + 'px')
+    }
+    
+    var hideTooltip = function (d) {
+      tooltip
+        .style("visibility", "hidden")
+        .style("opacity", 0);
+    }
+    
+    const bubbles = container.append('g')
+      .selectAll("dot")
+      .data(data)
+      .enter()
+      .append("circle")
+    bubbles.attr("class", "bubbles")
+      .transition()
+      .duration(1000)
+      .attr('transform', function (d) {
+        let p = {
+          x: (d.radius * Math.cos(d.angle)),
+          y: (d.radius * Math.sin(d.angle))
+        };
+        return 'translate(' + p.x + ',' + p.y + ')';
+      })
+      .attr("r", d => z(Number(d.size)))
+      .style("fill", d => colorPalette[d.category])
+      .style('filter', 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.25))')
+    
+    // -3- Trigger the functions
+    bubbles
+      .on("mouseover", showTooltip)
+      .on("mouseleave", hideTooltip);
+    
+    
+    var x2Axis = container.append("g")
+      .attr("class", "axis")
+      .attr("transform", `translate(${-width / 2},${0})`)
+      .call(d3.axisTop(x2)
+        .tickValues([0, 250000, 500000])
+        .tickSizeOuter(0)
+        .tickFormat(x => x ? `$${x / 1000}k` : '$0')
+      );
+    
+    // adding white spots to the axis according to the layout
+    x2Axis
+      .append("g")
+      .append('rect')
+      .attr('x', width * 0.11 + margin.left)
+      .attr('width', '4%')
+      .attr('height', 1)
+      .style('fill', '#fff')
+    
+    x2Axis
+      .append("g")
+      .append('rect')
+      .attr('x', width * 0.38 + margin.left)
+      .attr('width', '2%')
+      .attr('height', 1)
+      .style('fill', '#fff')
+    
+    x2Axis
+      .append("g")
+      .append('rect')
+      .attr('x', width * 0.45 + margin.left)
+      .attr('width', '10%')
+      .attr('height', 1)
+      .style('fill', '#fff')
+    
+    // shift axis labels according to layout
+    d3.selectAll('.axis .tick text')
+      .attr('dy', '6px')
+    
+    const ticks = svg.selectAll('.axis .tick text').nodes()
+    d3.select(ticks[0])
+      .attr('dx', '30px')
+    d3.select(ticks[ticks.length - 1])
+      .attr('dx', '-20px')
+    
+    // ticks backgrounds
+    d3.selectAll(".tick").each(function () {
+      var tick = d3.select(this),
+        text = tick.select('text'),
+        bBox = text.node().getBBox();
+      
+      tick.insert('rect', ':first-child')
+        .attr('x', bBox.x)
+        .attr('y', bBox.y)
+        .attr('height', bBox.height)
+        .attr('width', bBox.width)
+        .style('fill', '#fad3d6');
+    });
+  
+  </script>
+</body>
